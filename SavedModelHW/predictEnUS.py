@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import tensorflow as tf
 import numpy as np
 import os
+import glob
 
 
 
@@ -34,33 +35,27 @@ class ProcessImages():
         self.base_image_path = os.path.join(self.base_path, "words")
 
     def initModel(self):
-        words_list = []
+        self.words_list = []
 
         words = open(f"{self.base_path}\\words.txt", "r").readlines()
         for line in words:
             if line[0] == "#":
                 continue
             if line.split(" ")[1] != "err":  # We don't need to deal with errored entries.
-                words_list.append(line)
+                self.words_list.append(line)
 
-        len(words_list)
+        len(self.words_list)
 
-        np.random.shuffle(words_list)
-        split_idx = int(0.9 * len(words_list))
-        self.train_samples = words_list[:split_idx]
-        self.test_samples = words_list[split_idx:]
+        # np.random.shuffle(words_list)
+        # split_idx = int(0.9 * len(words_list))
+        # self.train_samples = words_list[:split_idx]
+        # self.test_samples = words_list[split_idx:]
 
-        val_split_idx = int(0.5 * len(self.test_samples))
-        self.validation_samples = self.test_samples[:val_split_idx]
-        self.test_samples = self.test_samples[val_split_idx:]
-        self.train_img_paths, self.train_labels = self.get_image_paths_and_labels(self.train_samples)
-        print (len(words_list))
-        print (len(self.train_samples))
-        print (len(self.validation_samples))
-        print (len(self.test_samples))
-        assert len(words_list) == len(self.train_samples) + len(self.validation_samples) + len(
-            self.test_samples
-        )
+        # val_split_idx = int(0.5 * len(self.test_samples))
+        # self.validation_samples = self.test_samples[:val_split_idx]
+        # self.test_samples = self.test_samples[val_split_idx:]
+        # self.train_img_paths, self.train_labels = self.get_image_paths_and_labels(self.train_samples)
+        
         
         self.new_model = tf.keras.models.load_model(self.model, custom_objects={"CTCLayer": CTCLayer})
         self.new_model.summary()
@@ -83,7 +78,7 @@ class ProcessImages():
 
     def run(self):
         self.initModel()
-        self.initMaxLen()
+        # self.initMaxLen()
         self.predictModel()
     def decode_batch_predictions(self, pred):
         input_len = np.ones(pred.shape[0]) * pred.shape[1]
@@ -105,31 +100,14 @@ class ProcessImages():
         return cleaned_labels
 
     def predictModel(self):
-        
-        test_img_paths, test_labels = self.get_image_paths_and_labels(self.test_samples)
-
-        test_labels_cleaned = self.clean_labels(test_labels)
-        test_ds = self.prepare_dataset(test_img_paths, test_labels_cleaned)
-        print (test_ds)
-        for batch in test_ds.take(1):
-            batch_images = batch["image"]
-            _, ax = plt.subplots(4, 4, figsize=(15, 8))
-            print(batch_images)
-            preds = self.predictsModel.predict(batch_images)
+        img_Path = "C:\\Users\\cucui\\AppData\\Local\Programs\\Python\\Python39\\ThisCyberware\\Lighthouse7\\Lighthouse7\\documents"
+        test_labels_cleaned = self.clean_labels(self.words_list)
+        test_img_paths = glob.glob(img_Path + "\\*.png")
+        for batch in test_img_paths:
+            batch_prepare = self.preprocess_image(batch)
+            preds = self.predictsModel.predict(batch_prepare)
             pred_texts = self.decode_batch_predictions(preds)
-
-            for i in range(16):
-                img = batch_images[i]
-                img = tf.image.flip_left_right(img)
-                img = tf.transpose(img, perm=[1, 0, 2])
-                img = (img * 255.0).numpy().clip(0, 255).astype(np.uint8)
-                img = img[:, :, 0]
-
-                title = f"Prediction: {pred_texts[i]}"
-                ax[i // 4, i % 4].imshow(img, cmap="gray")
-                ax[i // 4, i % 4].set_title(title)
-                ax[i // 4, i % 4].axis("off")
-
+           
     def prepare_dataset(self, image_paths, labels):
         AUTOTUNE = tf.data.AUTOTUNE
         batch_size = 64
@@ -218,4 +196,4 @@ class ProcessImages():
 pimage = ProcessImages()
 pimage.run()
 
-plt.show()
+# plt.show()
