@@ -81,6 +81,8 @@ class ProcessImages():
         test_img_paths = glob.glob(img_Path + "\\*.png")
         for batch in test_img_paths:
             img = self.preprocess_image(batch)
+            plt.imshow(img, cmap='gray')
+            plt.show()
             #img = tf.keras.utils.load_img(batch, target_size=(128, 32))
             img_array = tf.keras.utils.img_to_array(img)
             img_array = tf.expand_dims(img_array, 0) # Create a batch
@@ -92,8 +94,8 @@ class ProcessImages():
     def preprocess_image(self,image_path, img_size=(128, 32)):
         image = tf.io.read_file(image_path)
         image = tf.image.decode_png(image, 1)
-        image = tf.image.resize(image, img_size)
-        #image = self.distortion_free_resize(image, img_size)
+        #image = tf.image.resize(image, img_size)
+        image = self.distortion_free_resize(image, img_size)
         image = tf.cast(image, tf.float32) / 255.0
         return image
 
@@ -109,6 +111,41 @@ class ProcessImages():
             res = tf.strings.reduce_join(self.num_to_char(res)).numpy().decode("utf-8")
             output_text.append(res)
         return output_text
+    def distortion_free_resize(self, image, img_size):
+        w, h = img_size
+        image = tf.image.resize(image, size=(h, w), preserve_aspect_ratio=True)
+
+        # Check tha amount of padding needed to be done.
+        pad_height = h - tf.shape(image)[0]
+        pad_width = w - tf.shape(image)[1]
+
+        # Only necessary if you want to do same amount of padding on both sides.
+        if pad_height % 2 != 0:
+            height = pad_height // 2
+            pad_height_top = height + 1
+            pad_height_bottom = height
+        else:
+            pad_height_top = pad_height_bottom = pad_height // 2
+
+        if pad_width % 2 != 0:
+            width = pad_width // 2
+            pad_width_left = width + 1
+            pad_width_right = width
+        else:
+            pad_width_left = pad_width_right = pad_width // 2
+
+        image = tf.pad(
+            image,
+            paddings=[
+                [pad_height_top, pad_height_bottom],
+                [pad_width_left, pad_width_right],
+                [0, 0],
+            ],
+        )
+
+        image = tf.transpose(image, perm=[1, 0, 2])
+        image = tf.image.flip_left_right(image)
+        return image    
 
 pimage = ProcessImages()
 pimage.run()
