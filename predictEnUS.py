@@ -81,8 +81,8 @@ class ProcessImages():
         test_img_paths = glob.glob(img_Path + "\\*.png")
         for batch in test_img_paths:
             img = self.preprocess_image(batch)
-            plt.imshow(img, cmap='gray')
-            plt.show()
+            #plt.imshow(img, cmap='gray')
+            #plt.show()
             #img = tf.keras.utils.load_img(batch, target_size=(128, 32))
             img_array = tf.keras.utils.img_to_array(img)
             img_array = tf.expand_dims(img_array, 0) # Create a batch
